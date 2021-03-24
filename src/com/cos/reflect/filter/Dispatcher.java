@@ -1,9 +1,12 @@
 package com.cos.reflect.filter;
 
+import com.cos.reflect.controller.UserController;
+
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 public class Dispatcher implements Filter {
     @Override
@@ -16,14 +19,33 @@ public class Dispatcher implements Filter {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-        String endPoint = request.getRequestURI().replaceAll(request.getContextPath(), "");
-        System.out.println("엔드포인트 : " + endPoint);
+//		System.out.println("컨텍스트패스 : " + request.getContextPath()); // 프로젝트 시작주소
+//		System.out.println("식별자주소 : " + request.getRequestURI()); // 끝주소
+//		System.out.println("전체주소 : " + request.getRequestURL()); // 전체주소
+
+        String endpoint = request.getRequestURI().replace(request.getContextPath(), "");
+        System.out.println("endpoint = " + endpoint);
+
+        // 실제 Spring 프레임워크에서는 IoC 가 싱글톤으로 관리한다.
+        UserController userController = new UserController();
+
+        // 리플랙션 -> 메서드를 런타임 시점에 찾아내서 실행
+        Method[] methods = userController.getClass().getDeclaredMethods(); // 그 파일의 메서드만.
+
+        for (Method method : methods) {
+            if (endpoint.equals("/" + method.getName())) {
+                try {
+                    String path = (String) method.invoke(userController);
+                    RequestDispatcher requestDispatcher = request.getRequestDispatcher(path);
+                    requestDispatcher.forward(request, response);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                break;
+            }
+        }
 
 
-        RequestDispatcher requestDispatcher = request.getRequestDispatcher("/"); // 필터를 다시 안거친다.
-        // 필터를 통해서 requset, response객체를 만드는데, RequestDispatcher는 requset, response객체를
-        // 재활용함.
-        requestDispatcher.forward(request, response);
     }
 
     @Override
