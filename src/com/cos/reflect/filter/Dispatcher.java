@@ -32,7 +32,7 @@ public class Dispatcher implements Filter {
 //		System.out.println("전체주소 : " + request.getRequestURL()); // 전체주소
 
         String endpoint = request.getRequestURI().replace(request.getContextPath(), "");
-        System.out.println("endpoint = " + endpoint);
+//        System.out.println("endpoint = " + endpoint);
 
         // 실제 Spring 프레임워크에서는 IoC 가 싱글톤으로 관리한다.
         UserController userController = new UserController();
@@ -94,7 +94,7 @@ public class Dispatcher implements Filter {
                 if (method.getName().equals(methodKey)) {
                     try {
                         // request.getParameter(key) -> setUsername("username의 입력값") 함수 호출
-                        if (request.getParameter(key).chars().allMatch(Character::isDigit)) {
+                        if (key.equals("id")) {
                             // request.getParameter(key)의 값이 int 라면?
                             int value = Integer.parseInt(request.getParameter(key));
                             method.invoke(instance, value);
