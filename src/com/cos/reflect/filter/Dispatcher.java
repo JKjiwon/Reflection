@@ -7,11 +7,16 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.Enumeration;
 
 public class Dispatcher implements Filter {
+
+    private boolean isMatching = false;
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
 
@@ -41,20 +46,76 @@ public class Dispatcher implements Filter {
             Annotation annotation = method.getDeclaredAnnotation(RequestMapping.class);
             RequestMapping requestMapping = (RequestMapping) annotation;
 
-            if(requestMapping.value().equals(endpoint)){
-                try{
-                    String path = (String) method.invoke(userController);
+            if (requestMapping.value().equals(endpoint)) {
+                isMatching = true;
+                try {
+                    // Parameter가 xxxDto 1개 만 다룬다.
+                    Parameter[] parameters = method.getParameters();
+                    String path = null;
+                    if (parameters.length != 0) {
+                        // 파라메터가 있을 때
+                        Object dtoInstance = parameters[0].getType().newInstance(); // dto 인스턴스를 만들어서
+                        setData(dtoInstance, request); // dto 인스턴스에 값 주입
+                        path = (String) method.invoke(userController, dtoInstance);
+
+                    } else {
+                        // 파라메터가 없을 때
+                        path = (String) method.invoke(userController);
+                    }
+
                     RequestDispatcher requestDispatcher = request.getRequestDispatcher(path);
                     requestDispatcher.forward(request, response);
 
-                }catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 break;
             }
         }
 
+        if (isMatching) {
+            response.setContentType("text/html; charset=utf-8");
+            PrintWriter out = response.getWriter();
+            out.println("잘못된 주소요청 입니다. 404 에러 ");
+            out.flush();
+        }
 
+    }
+
+    private <T> void setData(T instance, HttpServletRequest request) { // instance : loginDto
+        Enumeration<String> keys = request.getParameterNames();  // (username, password)
+        while (keys.hasMoreElements()) {
+            String key = keys.nextElement();
+            String methodKey = keyToMethodKey(key); // setUsername
+
+            Method[] methods = instance.getClass().getDeclaredMethods(); // setUsername, setPassword
+
+            for (Method method : methods) {
+                if (method.getName().equals(methodKey)) {
+                    try {
+                        // request.getParameter(key) -> setUsername("username의 입력값") 함수 호출
+                        if (request.getParameter(key).chars().allMatch(Character::isDigit)) {
+                            // request.getParameter(key)의 값이 int 라면?
+                            int value = Integer.parseInt(request.getParameter(key));
+                            method.invoke(instance, value);
+                        } else {
+                            method.invoke(instance, request.getParameter(key));
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    private String keyToMethodKey(String key) {
+        String firstKey = "set";
+        String upperKey = key.substring(0, 1).toUpperCase();
+        String remainKey = key.substring(1);
+
+        return firstKey + upperKey + remainKey;
     }
 
     @Override
