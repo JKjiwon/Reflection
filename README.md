@@ -1,5 +1,5 @@
 # Reflection
-###  1. Reflection 를 이용하여 간단한 DispatcherServlet 구현
+###  1. Reflection 를 이용하여 간단한 DispatcherServlet(FrontController 패턴) 구현
 ###  2. 구현 환경
 * **Language**           :	JAVA 11.0.9
 * **Tomcat**             :	Tomcat 9.0.44
